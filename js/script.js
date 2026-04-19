@@ -1,5 +1,20 @@
 // NAVIGATION
+let isAdminAuthenticated = false;
+
 function showSection(sectionId) {
+    if (sectionId === 'admin') {
+        if (!isAdminAuthenticated) {
+            const username = prompt('Usuario:');
+            const password = prompt('Contraseña:');
+            if (username === 'admin' && password === '1234') {
+                isAdminAuthenticated = true;
+            } else {
+                alert('Credenciales incorrectas');
+                return;
+            }
+        }
+    }
+
     const sections = document.querySelectorAll('.section');
     sections.forEach(section => section.classList.remove('active'));
     document.getElementById(sectionId).classList.add('active');
@@ -194,18 +209,30 @@ function cambiarEstado(reportId) {
     const reporteIndex = reportes.findIndex(r => r.id === reportId);
 
     if (reporteIndex !== -1) {
-        const estados = ['Pendiente', 'En Proceso', 'Solucionado'];
-        const estadoActual = reportes[reporteIndex].estado;
-        const estadoIndex = estados.indexOf(estadoActual);
-        const nuevoEstado = estados[(estadoIndex + 1) % estados.length];
+        const nuevoEstado = prompt('Selecciona el nuevo estado:\n1. Pendiente\n2. En Proceso\n3. Solucionado\nIngresa el número:');
+        let estadoSeleccionado;
+        switch (nuevoEstado) {
+            case '1':
+                estadoSeleccionado = 'Pendiente';
+                break;
+            case '2':
+                estadoSeleccionado = 'En Proceso';
+                break;
+            case '3':
+                estadoSeleccionado = 'Solucionado';
+                break;
+            default:
+                alert('Opción inválida');
+                return;
+        }
 
-        reportes[reporteIndex].estado = nuevoEstado;
+        reportes[reporteIndex].estado = estadoSeleccionado;
         localStorage.setItem('reportes', JSON.stringify(reportes));
 
         // Recargar la tabla
         cargarReportesAdmin();
 
-        alert(`Estado del reporte ${reportId} cambiado a: ${nuevoEstado}`);
+        alert(`Estado del reporte ${reportId} cambiado a: ${estadoSeleccionado}`);
     }
 }
 
