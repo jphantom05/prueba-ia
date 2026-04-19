@@ -8,6 +8,8 @@ function showSection(sectionId) {
             const password = prompt('Contraseña:');
             if (username === 'admin' && password === '1234') {
                 isAdminAuthenticated = true;
+                const link = document.querySelector('a[onclick="showSection(\'admin\')"]');
+                link.textContent = 'Panel Admin';
             } else {
                 alert('Credenciales incorrectas');
                 return;
@@ -26,12 +28,26 @@ function showSection(sectionId) {
     }
 }
 
+function logout() {
+    isAdminAuthenticated = false;
+    const link = document.querySelector('a[onclick="showSection(\'admin\')"]');
+    link.textContent = 'Acceso Admin';
+    showSection('inicio');
+}
+
 // CARD FLIP FUNCTION
 function flipCard(card) {
     card.classList.toggle('flipped');
 }
 
 // FORM SUBMISSION
+function generateReportId() {
+    let lastId = parseInt(localStorage.getItem('lastReportId') || '0');
+    lastId += 1;
+    localStorage.setItem('lastReportId', lastId.toString());
+    return 'RPT' + lastId.toString().padStart(4, '0');
+}
+
 document.getElementById('reportForm').addEventListener('submit', function(e) {
     e.preventDefault();
 
@@ -49,7 +65,7 @@ document.getElementById('reportForm').addEventListener('submit', function(e) {
     }
 
     // Generar ID único
-    const reportId = 'RPT-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+    const reportId = generateReportId();
 
     // Crear objeto del reporte
     const reporte = {
@@ -81,7 +97,13 @@ document.getElementById('reportForm').addEventListener('submit', function(e) {
         mensaje += `\n\nGuarda este ID para consultar el estado de tu reporte.`;
     }
 
-    alert(mensaje);
+    // Copiar ID al portapapeles
+    navigator.clipboard.writeText(reportId).then(() => {
+        alert(mensaje + '\n\nEl ID ha sido copiado al portapapeles.');
+    }).catch(() => {
+        alert(mensaje);
+    });
+
     this.reset();
 });
 
@@ -164,6 +186,7 @@ function cargarReportesAdmin() {
                 <div class="action-buttons">
                     <button class="btn-detail" onclick="verDetalle('${reporte.id}')">Ver Detalle</button>
                     <button class="btn-state" onclick="cambiarEstado('${reporte.id}')">Cambiar Estado</button>
+                    <button class="btn-delete" onclick="eliminarReporte('${reporte.id}')">Eliminar</button>
                 </div>
             </td>
         `;
@@ -233,6 +256,16 @@ function cambiarEstado(reportId) {
         cargarReportesAdmin();
 
         alert(`Estado del reporte ${reportId} cambiado a: ${estadoSeleccionado}`);
+    }
+}
+
+// DELETE REPORT
+function eliminarReporte(reportId) {
+    if (confirm('¿Estás seguro de que quieres eliminar este reporte?')) {
+        const reportes = JSON.parse(localStorage.getItem('reportes')) || [];
+        const nuevosReportes = reportes.filter(r => r.id !== reportId);
+        localStorage.setItem('reportes', JSON.stringify(nuevosReportes));
+        cargarReportesAdmin();
     }
 }
 
