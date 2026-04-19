@@ -6,6 +6,11 @@ function showSection(sectionId) {
     window.scrollTo(0, 0);
 }
 
+// CARD FLIP FUNCTION
+function flipCard(card) {
+    card.classList.toggle('flipped');
+}
+
 // FORM SUBMISSION
 document.getElementById('reportForm').addEventListener('submit', function(e) {
     e.preventDefault();
