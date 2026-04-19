@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte Ciudadano Bogotá</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <!-- HEADER -->
+    <header>
+        <div class="header-container">
+            <h1 onclick="showSection('inicio')">🏙️ Reporte Ciudadano Bogotá</h1>
+            <nav>
+                <ul>
+                    <li><a onclick="showSection('inicio')">Inicio</a></li>
+                    <li><a onclick="showSection('reportar')">Reportar Novedad</a></li>
+                    <li><a onclick="showSection('consultar')">Consultar Reporte</a></li>
+                    <li><a onclick="showSection('admin')">Acceso Admin</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+    
+    <!-- MAIN CONTENT -->
+    <main>
+        <!-- PÁGINA DE INICIO -->
+        <section id="inicio" class="section active">
+            <!-- HERO -->
+            <div class="hero">
+                <h2>Mejoremos juntos nuestra ciudad</h2>
+                <p class="hero-description">Reporta las novedades urbanas que encuentres y ayuda a mejorar nuestro Bogotá</p>
+                <button class="cta-button" onclick="showSection('reportar')">Crear Reporte Ahora</button>
+            </div>
+            
+            <!-- TIPOS DE NOVEDADES -->
+            <div class="info-section">
+                <h3>Tipos de novedades que puedes reportar</h3>
+                <div class="types-grid">
+                    <div class="type-card">
+                        <div class="type-icon">🛣️</div>
+                        <h4>Huecos</h4>
+                        <p>Daños en la malla vial</p>
+                    </div>
+                    <div class="type-card">
+                        <div class="type-icon">💡</div>
+                        <h4>Luminarias</h4>
+                        <p>Problemas con servidumbre eléctrica</p>
+                    </div>
+                    <div class="type-card">
+                        <div class="type-icon">🚦</div>
+                        <h4>Semáforos</h4>
+                        <p>Semáforos dañados o mal funcionamento</p>
+                    </div>
+                    <div class="type-card">
+                        <div class="type-icon">🗑️</div>
+                        <h4>Residuos</h4>
+                        <p>Acumulación de basura y aseo</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- FORMULARIO DE REPORTE -->
+        <section id="reportar" class="section">
+            <div class="form-section">
+                <h2>Registrar Nueva Novedad Urbana</h2>
+                <form id="reportForm">
+                    <div class="form-group">
+                        <label for="tipoNovedad">Tipo de Novedad</label>
+                        <select id="tipoNovedad" required>
+                            <option value="">-- Selecciona una opción --</option>
+                            <option value="malla-vial">Malla vial</option>
+                            <option value="alumbrado">Alumbrado</option>
+                            <option value="semaforos">Semáforos</option>
+                            <option value="aseo">Aseo</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="ubicacion">Ubicación exacta</label>
+                        <input type="text" id="ubicacion" placeholder="Ej: Calle 26 # 50-00" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="descripcion">Descripción del problema</label>
+                        <textarea id="descripcion" placeholder="Detalla el daño o problema encontrado" required></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="evidencia">Adjuntar evidencia fotográfica</label>
+                        <input type="file" id="evidencia" accept="image/*">
+                    </div>
+                    
+                    <!-- DATOS OPCIONALES -->
+                    <fieldset class="fieldset-optional">
+                        <legend>Datos Opcionales (Para seguimiento)</legend>
+                        
+                        <div class="form-group">
+                            <label for="nombreUsuario">Nombre completo</label>
+                            <input type="text" id="nombreUsuario" placeholder="Tu nombre (opcional)">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="contacto">Teléfono o Correo Electrónico</label>
+                            <input type="text" id="contacto" placeholder="Ej: 3001234567 o correo@email.com (opcional)">
+                        </div>
+                        
+                        <div class="form-group checkbox-group">
+                            <label for="autorizacionDatos">
+                                <input type="checkbox" id="autorizacionDatos">
+                                Autorizo el tratamiento de mis datos personales para el seguimiento de mi reporte de acuerdo con la Política de Protección de Datos
+                            </label>
+                        </div>
+                    </fieldset>
+                    
+                    <div class="form-buttons">
+                        <button type="submit" class="btn-submit">Enviar Reporte</button>
+                        <button type="reset" class="btn-reset">Limpiar Formulario</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+        
+        <!-- CONSULTA DE SEGUIMIENTO -->
+        <section id="consultar" class="section">
+            <div class="tracking-section">
+                <h2>Seguimiento de mi reporte</h2>
+                <div class="search-container">
+                    <input type="text" id="reportId" placeholder="Ingrese el ID de su reporte (Ej: RPT-001)">
+                    <button onclick="buscarReporte()">Buscar Estado</button>
+                </div>
+                <div id="resultContainer" class="result-container">
+                    <h4>Estado de su reporte:</h4>
+                    <p><strong>ID Reporte:</strong> <span id="resultId"></span></p>
+                    <p><strong>Tipo:</strong> <span id="resultType"></span></p>
+                    <p><strong>Ubicación:</strong> <span id="resultLocation"></span></p>
+                    <p><strong>Estado:</strong> <span id="resultStatus"></span></p>
+                    <p><strong>Fecha de Reporte:</strong> <span id="resultDate"></span></p>
+                </div>
+            </div>
+        </section>
+        
+        <!-- PANEL ADMINISTRATIVO -->
+        <section id="admin" class="section">
+            <div class="admin-section">
+                <h2>Panel de Control Administrativo</h2>
+                
+                <!-- ESTADÍSTICAS -->
+                <div class="stats-container">
+                    <div class="stat-card">
+                        <h3>Total de reportes</h3>
+                        <div class="stat-number">247</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Casos Críticos</h3>
+                        <div class="stat-number">12</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>En Proceso</h3>
+                        <div class="stat-number">35</div>
+                    </div>
+                </div>
+                
+                <!-- TABLA DE GESTIÓN -->
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Fecha</th>
+                            <th>Tipo de Novedad</th>
+                            <th>Ubicación</th>
+                            <th>Estado</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>RPT-001</td>
+                            <td>2026-04-10</td>
+                            <td>Malla vial</td>
+                            <td>Calle 26 # 50-00</td>
+                            <td><span class="status-badge status-pending">Pendiente</span></td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn-detail">Ver Detalle</button>
+                                    <button class="btn-state">Cambiar Estado</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>RPT-002</td>
+                            <td>2026-04-09</td>
+                            <td>Alumbrado</td>
+                            <td>Calle 50 # 15-30</td>
+                            <td><span class="status-badge status-processing">En Proceso</span></td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn-detail">Ver Detalle</button>
+                                    <button class="btn-state">Cambiar Estado</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>RPT-003</td>
+                            <td>2026-04-08</td>
+                            <td>Semáforos</td>
+                            <td>Carrera 7 # 72-20</td>
+                            <td><span class="status-badge status-solved">Solucionado</span></td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn-detail">Ver Detalle</button>
+                                    <button class="btn-state">Cambiar Estado</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>RPT-004</td>
+                            <td>2026-04-07</td>
+                            <td>Aseo</td>
+                            <td>Parque Bolívar</td>
+                            <td><span class="status-badge status-pending">Pendiente</span></td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn-detail">Ver Detalle</button>
+                                    <button class="btn-state">Cambiar Estado</button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+    
+    <script src="js/script.js"></script>
+</body>
+</html>
