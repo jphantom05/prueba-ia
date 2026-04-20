@@ -63,8 +63,34 @@ async function guardarReporte(reporte, imagenFile) {
 async function convertirImagenABase64(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                // Crear canvas y redimensionar
+                const canvas = document.createElement('canvas');
+                const maxWidth = 800;
+                let width = img.width;
+                let height = img.height;
+                
+                if (width > maxWidth) {
+                    height = Math.round((maxWidth / width) * height);
+                    width = maxWidth;
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // Convertir a Base64 con calidad 0.6
+                const base64 = canvas.toDataURL('image/jpeg', 0.6);
+                resolve(base64);
+            };
+            img.onerror = () => reject(new Error('Error al cargar la imagen'));
+            img.src = e.target.result;
+        };
+        reader.onerror = () => reject(new Error('Error al leer el archivo'));
         reader.readAsDataURL(file);
     });
 }
