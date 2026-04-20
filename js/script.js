@@ -1,5 +1,4 @@
 import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js";
 
 // NAVIGATION
 let isAdminAuthenticated = false;
@@ -44,22 +43,29 @@ window.flipCard = function(card) {
 
 async function guardarReporte(reporte, imagenFile) {
     const id = reporte.id;
-    let urlImagen = null;
+    let fotoBase64 = null;
     if (imagenFile) {
-        const storageRef = ref(window.storage, `reportes/${id}`);
-        await uploadBytes(storageRef, imagenFile);
-        urlImagen = await getDownloadURL(storageRef);
+        fotoBase64 = await convertirImagenABase64(imagenFile);
     }
     await setDoc(doc(window.db, "reportes", id), {
         titulo: reporte.tipo,
         descripcion: reporte.descripcion,
         ubicacion: reporte.ubicacion,
         fecha: reporte.fecha,
-        url_imagen: urlImagen,
+        fotoBase64: fotoBase64,
         nombre: reporte.nombre,
         contacto: reporte.contacto,
         estado: reporte.estado,
         autorizacion: reporte.autorizacion
+    });
+}
+
+async function convertirImagenABase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
     });
 }
 
@@ -172,9 +178,9 @@ window.buscarReporte = async function() {
             document.getElementById('resultContact').textContent = reporte.contacto || 'No proporcionado';
             const imgContainer = document.getElementById('resultImageContainer');
             imgContainer.innerHTML = '';
-            if (reporte.url_imagen) {
+            if (reporte.fotoBase64) {
                 const img = document.createElement('img');
-                img.src = reporte.url_imagen;
+                img.src = reporte.fotoBase64;
                 img.style.maxWidth = '200px';
                 imgContainer.appendChild(img);
             }
@@ -262,8 +268,8 @@ window.toggleDetalle = function(button) {
                     'aseo': 'Aseo'
                 };
                 let imgHtml = '';
-                if (reporte.url_imagen) {
-                    imgHtml = `<img src="${reporte.url_imagen}" alt="Evidencia">`;
+                if (reporte.fotoBase64) {
+                    imgHtml = `<img src="${reporte.fotoBase64}" alt="Evidencia">`;
                 } else {
                     imgHtml = '<p>No hay imagen adjunta</p>';
                 }
