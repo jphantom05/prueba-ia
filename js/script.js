@@ -219,7 +219,7 @@ function cargarReportesAdmin() {
             <td><span class="status-badge ${statusClass}">${reporte.estado}</span></td>
             <td>
                 <div class="action-buttons">
-                    <button class="btn-detail" onclick="verDetalle('${reporte.id}')">Ver Detalle</button>
+                    <button class="btn-detail" onclick="toggleDetalle(this)" data-id="${reporte.id}">Ver Detalle</button>
                     <button class="btn-state" onclick="cambiarEstado('${reporte.id}')">Cambiar Estado</button>
                     <button class="btn-delete" onclick="eliminarReporte('${reporte.id}')">Eliminar</button>
                 </div>
@@ -227,6 +227,13 @@ function cargarReportesAdmin() {
         `;
 
         tbody.appendChild(row);
+
+        // Crear fila de detalle
+        const detailRow = document.createElement('tr');
+        detailRow.className = 'detail-row';
+        detailRow.style.display = 'none';
+        detailRow.innerHTML = '<td colspan="6"></td>'; // Placeholder
+        tbody.appendChild(detailRow);
     });
 
     // Actualizar estadísticas
@@ -259,6 +266,56 @@ ${reporte.imagen ? 'Imagen adjunta: Ver en consulta de reporte' : ''}
         `.trim();
 
         alert(`Detalle del Reporte:\n\n${detalle}`);
+    }
+}
+
+// TOGGLE DETAIL ROW
+function toggleDetalle(button) {
+    // Ocultar todas las filas de detalle
+    document.querySelectorAll('.detail-row').forEach(dr => dr.style.display = 'none');
+
+    // Obtener la fila de detalle para este botón
+    const row = button.closest('tr');
+    const detailRow = row.nextElementSibling;
+
+    if (detailRow && detailRow.classList.contains('detail-row')) {
+        const reportId = button.getAttribute('data-id');
+        const reportes = JSON.parse(localStorage.getItem('reportes')) || [];
+        const reporte = reportes.find(r => r.id === reportId);
+
+        if (reporte) {
+            const tiposTraducidos = {
+                'malla-vial': 'Malla vial',
+                'alumbrado': 'Alumbrado',
+                'semaforos': 'Semáforos',
+                'aseo': 'Aseo'
+            };
+
+            let imgHtml = '';
+            if (reporte.imagen) {
+                imgHtml = `<img src="data:${reporte.imagen.type};base64,${reporte.imagen.data}" alt="Evidencia">`;
+            } else {
+                imgHtml = '<p>No hay imagen adjunta</p>';
+            }
+
+            detailRow.innerHTML = `<td colspan="6">
+                <div class="detail-content">
+                    <div>${imgHtml}</div>
+                    <div class="detail-data">
+                        <h4>${tiposTraducidos[reporte.tipo] || reporte.tipo}</h4>
+                        <p><strong>Ubicación:</strong> ${reporte.ubicacion}</p>
+                        <p><strong>Descripción:</strong> ${reporte.descripcion}</p>
+                        <p><strong>Estado:</strong> ${reporte.estado}</p>
+                        <p><strong>Fecha:</strong> ${reporte.fecha}</p>
+                        ${reporte.nombre ? `<p><strong>Nombre:</strong> ${reporte.nombre}</p>` : ''}
+                        ${reporte.contacto ? `<p><strong>Contacto:</strong> ${reporte.contacto}</p>` : ''}
+                    </div>
+                </div>
+            </td>`;
+        }
+
+        // Mostrar/ocultar
+        detailRow.style.display = detailRow.style.display === 'table-row' ? 'none' : 'table-row';
     }
 }
 

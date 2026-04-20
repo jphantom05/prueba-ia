@@ -535,3 +535,37 @@ table tbody tr:hover {
         grid-template-columns: 1fr;
     }
 }
+
+/* DETAIL ROW STYLES */
+.detail-row {
+    transition: all 0.3s ease;
+}
+
+.detail-content {
+    display: flex;
+    padding: 20px;
+    gap: 20px;
+}
+
+.detail-content img {
+    flex: 1;
+    max-width: 300px;
+    height: auto;
+    border-radius: 8px;
+}
+
+.detail-data {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.detail-data h4 {
+    margin: 0;
+    color: #2c3e50;
+}
+
+.detail-data p {
+    margin: 0;
+}
