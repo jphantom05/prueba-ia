@@ -48,7 +48,7 @@ function generateReportId() {
     return 'RPT' + lastId.toString().padStart(4, '0');
 }
 
-document.getElementById('reportForm').addEventListener('submit', function(e) {
+document.getElementById('reportForm').addEventListener('submit', async function(e) {
     e.preventDefault();
 
     const tipo = document.getElementById('tipoNovedad').value;
@@ -64,6 +64,28 @@ document.getElementById('reportForm').addEventListener('submit', function(e) {
         return;
     }
 
+    // Validar imagen
+    const evidencia = document.getElementById('evidencia').files[0];
+    let imagen = null;
+    if (evidencia) {
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+        if (!allowedTypes.includes(evidencia.type)) {
+            alert('Formato de imagen no permitido. Solo JPG, PNG, WebP.');
+            return;
+        }
+        if (evidencia.size > 2 * 1024 * 1024) {
+            alert('El tamaño de la imagen supera los 2MB.');
+            return;
+        }
+        // Convertir a base64
+        const base64 = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.readAsDataURL(evidencia);
+        });
+        imagen = {data: base64.split(',')[1], type: evidencia.type};
+    }
+
     // Generar ID único
     const reportId = generateReportId();
 
@@ -77,7 +99,8 @@ document.getElementById('reportForm').addEventListener('submit', function(e) {
         contacto: contacto,
         fecha: new Date().toISOString().split('T')[0], // Formato YYYY-MM-DD
         estado: 'Pendiente',
-        autorizacion: autorizacion
+        autorizacion: autorizacion,
+        imagen: imagen
     };
 
     // Guardar en localStorage
@@ -136,6 +159,18 @@ function buscarReporte() {
         document.getElementById('resultLocation').textContent = reporte.ubicacion;
         document.getElementById('resultStatus').textContent = reporte.estado;
         document.getElementById('resultDate').textContent = reporte.fecha;
+        document.getElementById('resultName').textContent = reporte.nombre || 'No proporcionado';
+        document.getElementById('resultContact').textContent = reporte.contacto || 'No proporcionado';
+
+        const imgContainer = document.getElementById('resultImageContainer');
+        imgContainer.innerHTML = '';
+        if (reporte.imagen) {
+            const img = document.createElement('img');
+            img.src = `data:${reporte.imagen.type};base64,${reporte.imagen.data}`;
+            img.style.maxWidth = '200px';
+            imgContainer.appendChild(img);
+        }
+
         document.getElementById('resultContainer').classList.add('show');
     } else {
         alert('No se encontró un reporte con ese ID. Verifica que el ID sea correcto.');
@@ -220,6 +255,7 @@ Descripción: ${reporte.descripcion}
 Estado: ${reporte.estado}
 ${reporte.nombre ? `Nombre: ${reporte.nombre}` : ''}
 ${reporte.contacto ? `Contacto: ${reporte.contacto}` : ''}
+${reporte.imagen ? 'Imagen adjunta: Ver en consulta de reporte' : ''}
         `.trim();
 
         alert(`Detalle del Reporte:\n\n${detalle}`);
