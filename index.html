@@ -269,6 +269,28 @@
         </section>
     </main>
     
-    <script src="js/script.js"></script>
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-analytics.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+        import { getStorage } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCqYfSesbO1E5To3WeZyC8JHRjNQe2cXIc",
+            authDomain: "reporte-ciudadano-bogota.firebaseapp.com",
+            projectId: "reporte-ciudadano-bogota",
+            storageBucket: "reporte-ciudadano-bogota.firebasestorage.app",
+            messagingSenderId: "80869365763",
+            appId: "1:80869365763:web:4b928e969f79022e015636",
+            measurementId: "G-H9V1T287XJ"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        window.db = getFirestore(app);
+        window.storage = getStorage(app);
+    </script>
+    <script type="module" src="js/script.js"></script>
 </body>
 </html>

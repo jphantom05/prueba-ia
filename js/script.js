@@ -1,7 +1,10 @@
+import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js";
+
 // NAVIGATION
 let isAdminAuthenticated = false;
 
-function showSection(sectionId) {
+window.showSection = function(sectionId) {
     if (sectionId === 'admin') {
         if (!isAdminAuthenticated) {
             const username = prompt('Usuario:');
@@ -9,7 +12,7 @@ function showSection(sectionId) {
             if (username === 'admin' && password === '1234') {
                 isAdminAuthenticated = true;
                 const link = document.querySelector('a[onclick="showSection(\'admin\')"]');
-                link.textContent = 'Panel Admin';
+                if (link) link.textContent = 'Panel Admin';
             } else {
                 alert('Credenciales incorrectas');
                 return;
@@ -22,30 +25,52 @@ function showSection(sectionId) {
     document.getElementById(sectionId).classList.add('active');
     window.scrollTo(0, 0);
 
-    // Si es la sección admin, cargar reportes
     if (sectionId === 'admin') {
-        cargarReportesAdmin();
+        window.cargarReportesAdmin();
     }
-}
+};
 
-function logout() {
+window.logout = function() {
     isAdminAuthenticated = false;
     const link = document.querySelector('a[onclick="showSection(\'admin\')"]');
-    link.textContent = 'Acceso Admin';
-    showSection('inicio');
-}
+    if (link) link.textContent = 'Acceso Admin';
+    window.showSection('inicio');
+};
 
 // CARD FLIP FUNCTION
-function flipCard(card) {
+window.flipCard = function(card) {
     card.classList.toggle('flipped');
+};
+
+async function guardarReporte(reporte, imagenFile) {
+    const id = reporte.id;
+    let urlImagen = null;
+    if (imagenFile) {
+        const storageRef = ref(window.storage, `reportes/${id}`);
+        await uploadBytes(storageRef, imagenFile);
+        urlImagen = await getDownloadURL(storageRef);
+    }
+    await setDoc(doc(window.db, "reportes", id), {
+        titulo: reporte.tipo,
+        descripcion: reporte.descripcion,
+        ubicacion: reporte.ubicacion,
+        fecha: reporte.fecha,
+        url_imagen: urlImagen,
+        nombre: reporte.nombre,
+        contacto: reporte.contacto,
+        estado: reporte.estado,
+        autorizacion: reporte.autorizacion
+    });
 }
 
-// FORM SUBMISSION
-function generateReportId() {
-    let lastId = parseInt(localStorage.getItem('lastReportId') || '0');
-    lastId += 1;
-    localStorage.setItem('lastReportId', lastId.toString());
-    return 'RPT' + lastId.toString().padStart(4, '0');
+async function generateReportId() {
+    while (true) {
+        const randomId = `RPT${Math.floor(Math.random() * 9000 + 1000)}`;
+        const docSnap = await getDoc(doc(window.db, "reportes", randomId));
+        if (!docSnap.exists()) {
+            return randomId;
+        }
+    }
 }
 
 document.getElementById('reportForm').addEventListener('submit', async function(e) {
@@ -66,7 +91,6 @@ document.getElementById('reportForm').addEventListener('submit', async function(
 
     // Validar imagen
     const evidencia = document.getElementById('evidencia').files[0];
-    let imagen = null;
     if (evidencia) {
         const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
         if (!allowedTypes.includes(evidencia.type)) {
@@ -77,17 +101,10 @@ document.getElementById('reportForm').addEventListener('submit', async function(
             alert('El tamaño de la imagen supera los 2MB.');
             return;
         }
-        // Convertir a base64
-        const base64 = await new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.readAsDataURL(evidencia);
-        });
-        imagen = {data: base64.split(',')[1], type: evidencia.type};
     }
 
     // Generar ID único
-    const reportId = generateReportId();
+    const reportId = await generateReportId();
 
     // Crear objeto del reporte
     const reporte = {
@@ -99,232 +116,182 @@ document.getElementById('reportForm').addEventListener('submit', async function(
         contacto: contacto,
         fecha: new Date().toISOString().split('T')[0], // Formato YYYY-MM-DD
         estado: 'Pendiente',
-        autorizacion: autorizacion,
-        imagen: imagen
+        autorizacion: autorizacion
     };
 
-    // Guardar en localStorage
-    let reportes = JSON.parse(localStorage.getItem('reportes')) || [];
-    reportes.push(reporte);
-    localStorage.setItem('reportes', JSON.stringify(reportes));
+    try {
+        await guardarReporte(reporte, evidencia);
+        // Mostrar mensaje de éxito con ID
+        let mensaje = `✅ ¡Reporte registrado exitosamente!\n\nID de Seguimiento: ${reportId}\nTipo: ${tipo}\nUbicación: ${ubicacion}`;
 
-    // Mostrar mensaje de éxito con ID
-    let mensaje = `✅ ¡Reporte registrado exitosamente!\n\nID de Seguimiento: ${reportId}\nTipo: ${tipo}\nUbicación: ${ubicacion}`;
+        if (nombre || contacto) {
+            mensaje += `\n\nDatos de seguimiento:`;
+            if (nombre) mensaje += `\nNombre: ${nombre}`;
+            if (contacto) mensaje += `\nContacto: ${contacto}`;
+            mensaje += `\n\nGuarda este ID para consultar el estado de tu reporte.`;
+        } else {
+            mensaje += `\n\nGuarda este ID para consultar el estado de tu reporte.`;
+        }
 
-    if (nombre || contacto) {
-        mensaje += `\n\nDatos de seguimiento:`;
-        if (nombre) mensaje += `\nNombre: ${nombre}`;
-        if (contacto) mensaje += `\nContacto: ${contacto}`;
-        mensaje += `\n\nGuarda este ID para consultar el estado de tu reporte.`;
-    } else {
-        mensaje += `\n\nGuarda este ID para consultar el estado de tu reporte.`;
+        // Copiar ID al portapapeles
+        navigator.clipboard.writeText(reportId).then(() => {
+            alert(mensaje + '\n\nEl ID ha sido copiado al portapapeles.');
+        }).catch(() => {
+            alert(mensaje);
+        });
+
+        this.reset();
+    } catch (error) {
+        alert('Error al guardar el reporte: ' + error.message);
     }
-
-    // Copiar ID al portapapeles
-    navigator.clipboard.writeText(reportId).then(() => {
-        alert(mensaje + '\n\nEl ID ha sido copiado al portapapeles.');
-    }).catch(() => {
-        alert(mensaje);
-    });
-
-    this.reset();
 });
 
 // SEARCH REPORTS
-function buscarReporte() {
+window.buscarReporte = async function() {
     const reportId = document.getElementById('reportId').value.trim();
-
     if (!reportId) {
         alert('Por favor ingresa el ID del reporte');
         return;
     }
-
-    // Obtener reportes de localStorage
-    const reportes = JSON.parse(localStorage.getItem('reportes')) || [];
-
-    // Buscar el reporte por ID
-    const reporte = reportes.find(r => r.id === reportId);
-
-    if (reporte) {
-        // Traducir el tipo para mostrar
-        const tiposTraducidos = {
-            'malla-vial': 'Malla vial',
-            'alumbrado': 'Alumbrado',
-            'semaforos': 'Semáforos',
-            'aseo': 'Aseo'
-        };
-
-        document.getElementById('resultId').textContent = reporte.id;
-        document.getElementById('resultType').textContent = tiposTraducidos[reporte.tipo] || reporte.tipo;
-        document.getElementById('resultLocation').textContent = reporte.ubicacion;
-        document.getElementById('resultStatus').textContent = reporte.estado;
-        document.getElementById('resultDate').textContent = reporte.fecha;
-        document.getElementById('resultName').textContent = reporte.nombre || 'No proporcionado';
-        document.getElementById('resultContact').textContent = reporte.contacto || 'No proporcionado';
-
-        const imgContainer = document.getElementById('resultImageContainer');
-        imgContainer.innerHTML = '';
-        if (reporte.imagen) {
-            const img = document.createElement('img');
-            img.src = `data:${reporte.imagen.type};base64,${reporte.imagen.data}`;
-            img.style.maxWidth = '200px';
-            imgContainer.appendChild(img);
-        }
-
-        document.getElementById('resultContainer').classList.add('show');
-    } else {
-        alert('No se encontró un reporte con ese ID. Verifica que el ID sea correcto.');
-        document.getElementById('resultContainer').classList.remove('show');
-    }
-}
-
-// LOAD ADMIN REPORTS
-function cargarReportesAdmin() {
-    const reportes = JSON.parse(localStorage.getItem('reportes')) || [];
-    const tbody = document.querySelector('table tbody');
-
-    // Limpiar tabla actual
-    tbody.innerHTML = '';
-
-    if (reportes.length === 0) {
-        // Si no hay reportes, mostrar mensaje
-        const row = document.createElement('tr');
-        row.innerHTML = '<td colspan="6" style="text-align: center; padding: 20px;">No hay reportes registrados aún</td>';
-        tbody.appendChild(row);
-        return;
-    }
-
-    // Traducir tipos
-    const tiposTraducidos = {
-        'malla-vial': 'Malla vial',
-        'alumbrado': 'Alumbrado',
-        'semaforos': 'Semáforos',
-        'aseo': 'Aseo'
-    };
-
-    // Agregar filas de reportes
-    reportes.forEach(reporte => {
-        const row = document.createElement('tr');
-
-        // Determinar clase del estado
-        let statusClass = 'status-pending';
-        if (reporte.estado === 'En Proceso') statusClass = 'status-processing';
-        if (reporte.estado === 'Solucionado') statusClass = 'status-solved';
-
-        row.innerHTML = `
-            <td>${reporte.id}</td>
-            <td>${reporte.fecha}</td>
-            <td>${tiposTraducidos[reporte.tipo] || reporte.tipo}</td>
-            <td>${reporte.ubicacion}</td>
-            <td><span class="status-badge ${statusClass}">${reporte.estado}</span></td>
-            <td>
-                <div class="action-buttons">
-                    <button class="btn-detail" onclick="toggleDetalle(this)" data-id="${reporte.id}">Ver Detalle</button>
-                    <button class="btn-state" onclick="cambiarEstado('${reporte.id}')">Cambiar Estado</button>
-                    <button class="btn-delete" onclick="eliminarReporte('${reporte.id}')">Eliminar</button>
-                </div>
-            </td>
-        `;
-
-        tbody.appendChild(row);
-
-        // Crear fila de detalle
-        const detailRow = document.createElement('tr');
-        detailRow.className = 'detail-row';
-        detailRow.style.display = 'none';
-        detailRow.innerHTML = '<td colspan="6"></td>'; // Placeholder
-        tbody.appendChild(detailRow);
-    });
-
-    // Actualizar estadísticas
-    actualizarEstadisticas(reportes);
-}
-
-// VIEW REPORT DETAIL
-function verDetalle(reportId) {
-    const reportes = JSON.parse(localStorage.getItem('reportes')) || [];
-    const reporte = reportes.find(r => r.id === reportId);
-
-    if (reporte) {
-        const tiposTraducidos = {
-            'malla-vial': 'Malla vial',
-            'alumbrado': 'Alumbrado',
-            'semaforos': 'Semáforos',
-            'aseo': 'Aseo'
-        };
-
-        const detalle = `
-ID: ${reporte.id}
-Fecha: ${reporte.fecha}
-Tipo: ${tiposTraducidos[reporte.tipo] || reporte.tipo}
-Ubicación: ${reporte.ubicacion}
-Descripción: ${reporte.descripcion}
-Estado: ${reporte.estado}
-${reporte.nombre ? `Nombre: ${reporte.nombre}` : ''}
-${reporte.contacto ? `Contacto: ${reporte.contacto}` : ''}
-${reporte.imagen ? 'Imagen adjunta: Ver en consulta de reporte' : ''}
-        `.trim();
-
-        alert(`Detalle del Reporte:\n\n${detalle}`);
-    }
-}
-
-// TOGGLE DETAIL ROW
-function toggleDetalle(button) {
-    // Ocultar todas las filas de detalle
-    document.querySelectorAll('.detail-row').forEach(dr => dr.style.display = 'none');
-
-    // Obtener la fila de detalle para este botón
-    const row = button.closest('tr');
-    const detailRow = row.nextElementSibling;
-
-    if (detailRow && detailRow.classList.contains('detail-row')) {
-        const reportId = button.getAttribute('data-id');
-        const reportes = JSON.parse(localStorage.getItem('reportes')) || [];
-        const reporte = reportes.find(r => r.id === reportId);
-
-        if (reporte) {
+    try {
+        const docSnap = await getDoc(doc(window.db, "reportes", reportId));
+        if (docSnap.exists()) {
+            const reporte = {id: docSnap.id, ...docSnap.data()};
             const tiposTraducidos = {
                 'malla-vial': 'Malla vial',
                 'alumbrado': 'Alumbrado',
                 'semaforos': 'Semáforos',
                 'aseo': 'Aseo'
             };
-
-            let imgHtml = '';
-            if (reporte.imagen) {
-                imgHtml = `<img src="data:${reporte.imagen.type};base64,${reporte.imagen.data}" alt="Evidencia">`;
-            } else {
-                imgHtml = '<p>No hay imagen adjunta</p>';
+            document.getElementById('resultId').textContent = reporte.id;
+            document.getElementById('resultType').textContent = tiposTraducidos[reporte.titulo] || reporte.titulo;
+            document.getElementById('resultLocation').textContent = reporte.ubicacion;
+            document.getElementById('resultStatus').textContent = reporte.estado;
+            document.getElementById('resultDate').textContent = reporte.fecha;
+            document.getElementById('resultName').textContent = reporte.nombre || 'No proporcionado';
+            document.getElementById('resultContact').textContent = reporte.contacto || 'No proporcionado';
+            const imgContainer = document.getElementById('resultImageContainer');
+            imgContainer.innerHTML = '';
+            if (reporte.url_imagen) {
+                const img = document.createElement('img');
+                img.src = reporte.url_imagen;
+                img.style.maxWidth = '200px';
+                imgContainer.appendChild(img);
             }
-
-            detailRow.innerHTML = `<td colspan="6">
-                <div class="detail-content">
-                    <div>${imgHtml}</div>
-                    <div class="detail-data">
-                        <h4>${tiposTraducidos[reporte.tipo] || reporte.tipo}</h4>
-                        <p><strong>Ubicación:</strong> ${reporte.ubicacion}</p>
-                        <p><strong>Descripción:</strong> ${reporte.descripcion}</p>
-                        <p><strong>Estado:</strong> ${reporte.estado}</p>
-                        <p><strong>Fecha:</strong> ${reporte.fecha}</p>
-                        ${reporte.nombre ? `<p><strong>Nombre:</strong> ${reporte.nombre}</p>` : ''}
-                        ${reporte.contacto ? `<p><strong>Contacto:</strong> ${reporte.contacto}</p>` : ''}
-                    </div>
-                </div>
-            </td>`;
+            document.getElementById('resultContainer').classList.add('show');
+        } else {
+            alert('No se encontró un reporte con ese ID. Verifica que el ID sea correcto.');
+            document.getElementById('resultContainer').classList.remove('show');
         }
+    } catch (error) {
+        alert('Error al buscar reporte: ' + error.message);
+    }
+}
 
-        // Mostrar/ocultar
-        detailRow.style.display = detailRow.style.display === 'table-row' ? 'none' : 'table-row';
+// LOAD ADMIN REPORTS
+window.cargarReportesAdmin = async function() {
+    try {
+        const querySnapshot = await getDocs(collection(window.db, "reportes"));
+        const reportes = [];
+        querySnapshot.forEach((docSnap) => {
+            reportes.push({id: docSnap.id, ...docSnap.data()});
+        });
+        const tbody = document.querySelector('table tbody');
+        tbody.innerHTML = '';
+        if (reportes.length === 0) {
+            const row = document.createElement('tr');
+            row.innerHTML = '<td colspan="6" style="text-align: center; padding: 20px;">No hay reportes registrados aún</td>';
+            tbody.appendChild(row);
+            return;
+        }
+        const tiposTraducidos = {
+            'malla-vial': 'Malla vial',
+            'alumbrado': 'Alumbrado',
+            'semaforos': 'Semáforos',
+            'aseo': 'Aseo'
+        };
+        reportes.forEach(reporte => {
+            const row = document.createElement('tr');
+            let statusClass = 'status-pending';
+            if (reporte.estado === 'En Proceso') statusClass = 'status-processing';
+            if (reporte.estado === 'Solucionado') statusClass = 'status-solved';
+            row.innerHTML = `
+                <td>${reporte.id}</td>
+                <td>${reporte.fecha}</td>
+                <td>${tiposTraducidos[reporte.titulo] || reporte.titulo}</td>
+                <td>${reporte.ubicacion}</td>
+                <td><span class="status-badge ${statusClass}">${reporte.estado}</span></td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn-detail" onclick="toggleDetalle(this)" data-id="${reporte.id}">Ver Detalle</button>
+                        <button class="btn-state" onclick="cambiarEstado('${reporte.id}')">Cambiar Estado</button>
+                        <button class="btn-delete" onclick="eliminarReporte('${reporte.id}')">Eliminar</button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(row);
+            const detailRow = document.createElement('tr');
+            detailRow.className = 'detail-row';
+            detailRow.style.display = 'none';
+            detailRow.innerHTML = '<td colspan="6"></td>';
+            tbody.appendChild(detailRow);
+        });
+        actualizarEstadisticas(reportes);
+    } catch (error) {
+        alert('Error al cargar reportes: ' + error.message);
+    }
+}
+
+// VIEW REPORT DETAIL
+
+
+// TOGGLE DETAIL ROW
+window.toggleDetalle = function(button) {
+    document.querySelectorAll('.detail-row').forEach(dr => dr.style.display = 'none');
+    const row = button.closest('tr');
+    const detailRow = row.nextElementSibling;
+    if (detailRow && detailRow.classList.contains('detail-row')) {
+        const reportId = button.getAttribute('data-id');
+        getDoc(doc(window.db, "reportes", reportId)).then(docSnap => {
+            if (docSnap.exists()) {
+                const reporte = {id: docSnap.id, ...docSnap.data()};
+                const tiposTraducidos = {
+                    'malla-vial': 'Malla vial',
+                    'alumbrado': 'Alumbrado',
+                    'semaforos': 'Semáforos',
+                    'aseo': 'Aseo'
+                };
+                let imgHtml = '';
+                if (reporte.url_imagen) {
+                    imgHtml = `<img src="${reporte.url_imagen}" alt="Evidencia">`;
+                } else {
+                    imgHtml = '<p>No hay imagen adjunta</p>';
+                }
+                detailRow.innerHTML = `<td colspan="6">
+                    <div class="detail-content">
+                        <div>${imgHtml}</div>
+                        <div class="detail-data">
+                            <h4>${tiposTraducidos[reporte.titulo] || reporte.titulo}</h4>
+                            <p><strong>Ubicación:</strong> ${reporte.ubicacion}</p>
+                            <p><strong>Descripción:</strong> ${reporte.descripcion}</p>
+                            <p><strong>Estado:</strong> ${reporte.estado}</p>
+                            <p><strong>Fecha:</strong> ${reporte.fecha}</p>
+                            ${reporte.nombre ? `<p><strong>Nombre:</strong> ${reporte.nombre}</p>` : ''}
+                            ${reporte.contacto ? `<p><strong>Contacto:</strong> ${reporte.contacto}</p>` : ''}
+                        </div>
+                    </div>
+                </td>`;
+                detailRow.style.display = 'table-row';
+            }
+        }).catch(error => {
+            alert('Error al cargar detalle: ' + error.message);
+        });
     }
 }
 
 // CHANGE REPORT STATUS
-function cambiarEstado(reportId) {
-    const reportes = JSON.parse(localStorage.getItem('reportes')) || [];
-    const reporteIndex = reportes.findIndex(r => r.id === reportId);
-
-    if (reporteIndex !== -1) {
+window.cambiarEstado = async function(reportId) {
+    try {
         const nuevoEstado = prompt('Selecciona el nuevo estado:\n1. Pendiente\n2. En Proceso\n3. Solucionado\nIngresa el número:');
         let estadoSeleccionado;
         switch (nuevoEstado) {
@@ -341,24 +308,23 @@ function cambiarEstado(reportId) {
                 alert('Opción inválida');
                 return;
         }
-
-        reportes[reporteIndex].estado = estadoSeleccionado;
-        localStorage.setItem('reportes', JSON.stringify(reportes));
-
-        // Recargar la tabla
-        cargarReportesAdmin();
-
+        await updateDoc(doc(window.db, "reportes", reportId), {estado: estadoSeleccionado});
+        window.cargarReportesAdmin();
         alert(`Estado del reporte ${reportId} cambiado a: ${estadoSeleccionado}`);
+    } catch (error) {
+        alert('Error al cambiar estado: ' + error.message);
     }
 }
 
 // DELETE REPORT
-function eliminarReporte(reportId) {
+window.eliminarReporte = async function(reportId) {
     if (confirm('¿Estás seguro de que quieres eliminar este reporte?')) {
-        const reportes = JSON.parse(localStorage.getItem('reportes')) || [];
-        const nuevosReportes = reportes.filter(r => r.id !== reportId);
-        localStorage.setItem('reportes', JSON.stringify(nuevosReportes));
-        cargarReportesAdmin();
+        try {
+            await deleteDoc(doc(window.db, "reportes", reportId));
+            window.cargarReportesAdmin();
+        } catch (error) {
+            alert('Error al eliminar reporte: ' + error.message);
+        }
     }
 }
 
